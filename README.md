@@ -1,67 +1,85 @@
 # FarajaMH OMOP Knowledge Graph
 
-## Overview
+A longitudinal mental health knowledge graph that transforms OMOP-derived study data into a clinically meaningful patient journey in Neo4j.
 
-This project builds a longitudinal mental health knowledge graph from OMOP-based study data. The system links the same person across multiple visits and time points, connecting their observations, measurements, conditions, and future clinical note-derived findings into a continuous care pathway.
+---
 
-The goal is to move beyond static database tables and support a more clinically meaningful representation of patient journeys in mental health care.
+## Project summary
+
+This project builds a longitudinal mental health knowledge graph from OMOP-based study data. The system links the same individual across multiple visits and time points, connecting observations, measurements, conditions, and future clinical-note findings into a continuous care pathway.
+
+Rather than viewing patient data as disconnected rows in PostgreSQL, the project represents the same person as a connected clinical trajectory. This makes it possible to follow a patient from wave 1 to wave 2 to wave 3, identify changes in symptoms and scores over time, and pinpoint points where patients disengage from care.
 
 ---
 
 ## Why this matters
 
-Most clinical datasets are stored in tables, but treatment is not experienced as a table. It is experienced as a personal journey over time.
+Mental health care is inherently longitudinal. Patients do not experience treatment as isolated records; they experience it as a sequence of encounters, assessments, symptom changes, and engagement patterns over time.
 
-A patient may:
-- begin care at wave 1,
-- show changes in symptoms at wave 2,
-- disengage, worsen, or return for follow-up at wave 3.
+A traditional relational database can answer basic counts, but a knowledge graph can answer deeper care-path questions such as:
 
-In a traditional relational database, these may appear as disconnected records. In a knowledge graph, the same person remains connected across visits and events, making the care pathway visible.
+- Which patient followed the same trajectory from wave 1 to wave 2 to wave 3?
+- Which symptoms worsened or improved over time?
+- Which measurements changed across visits?
+- Where did a patient stop attending care?
+- Which observations and measurements are connected to a given care episode?
 
-This is particularly important for mental health, where symptoms, functioning, risk indicators, and treatment engagement often evolve over time.
+This makes the graph a stronger foundation for mental health pathway analysis, engagement monitoring, and longitudinal patient insight.
 
 ---
 
 ## The problem we are addressing
 
-Healthcare and research teams often have rich clinical data, but it is difficult to see:
-- which observations belong to the same patient over time,
-- how symptoms change across visits,
-- where a patient dropped out of care,
-- which measurements and conditions are associated with a care episode,
-- how longitudinal trajectories differ across patients.
+Healthcare and research teams often have rich clinical data, but it is difficult to see the full patient journey when evidence is spread across many tables and records.
 
-The knowledge graph approach addresses this by representing relationships explicitly rather than only storing rows of data.
+The main challenges include:
+
+- tracking the same patient across multiple visits and time points
+- connecting measurements and observations to one person and one care episode
+- understanding how symptoms and scores change over time
+- identifying care gaps and drop-off between visits
+- preparing for future integration of clinical notes and narrative risk indicators
+
+The knowledge graph approach addresses these challenges by making relationships explicit and clinically interpretable.
 
 ---
 
-## Our approach
+## Project approach
 
-We connect OMOP-derived clinical data to a Neo4j graph using a consistent pseudonymized identifier strategy. This means the same person can be traced across multiple records while preserving privacy.
+We connect OMOP-derived data to a Neo4j graph using a consistent pseudonymized identifier model. This allows the same person and visit to be matched across datasets while preserving privacy.
 
-The graph captures:
-- Person identity
-- Visit timeline
-- Observation values and categories
-- Measurement scores
-- Conditions
-- Care continuity and visit sequencing
-- Future clinical note extraction and symptom linkage
+The graph includes:
 
-This creates a foundation for longitudinal analysis of mental health care, patient retention, and care pathway identification.
+- Person nodes
+- Visit nodes
+- Observation nodes
+- ObservationCategory nodes
+- Measurement nodes
+- Condition nodes
+- Concept nodes
+- Future ClinicalNote and Symptom nodes
+
+Example relationships:
+
+- Person -[:HAS_VISIT]-> Visit
+- Visit -[:HAS_OBSERVATION]-> Observation
+- Visit -[:HAS_MEASUREMENT]-> Measurement
+- Visit -[:HAS_CONDITION]-> Condition
+- Visit -[:NEXT_VISIT]-> Visit
+- Observation -[:HAS_CATEGORY]-> ObservationCategory
 
 ---
 
 ## Example patient journey
 
-A single participant can be followed as a longitudinal case:
+A single patient can be followed through a longitudinal care pathway:
 
-- Wave 1: baseline assessment, observations recorded, initial measurement scores captured
-- Wave 2: patient returns for follow-up, symptoms and metrics are re-evaluated
-- Wave 3: graph shows whether the patient remained engaged, improved, worsened, or dropped out of care
+- Wave 1: baseline assessment, observations, and measurements are recorded
+- Wave 2: follow-up visit shows whether symptoms improved or worsened
+- Wave 3: graph shows whether the patient remained engaged or dropped out of care
 
-Example observation labels:
+### Example observation labels
+
 - Marital status
 - Household size
 - Gravida
@@ -69,7 +87,8 @@ Example observation labels:
 - Birth outcome
 - Delivery method
 
-Example measurement labels:
+### Example measurement labels
+
 - PHQ-9 score
 - GAD-7 score
 - Depression score
@@ -77,84 +96,91 @@ Example measurement labels:
 - Sleep quality score
 - Functional wellbeing score
 
-The graph can therefore show not only what happened, but how the patient’s condition changed over time.
+This allows the system to represent not only isolated values, but a coherent patient trajectory over time.
 
 ---
 
-## Why this is stronger than pgAdmin alone
+## Why the graph is stronger than pgAdmin tables
 
-PostgreSQL and pgAdmin are excellent for structured storage and reporting, but they are weaker at representing patient trajectories and relationships across time.
+PostgreSQL and pgAdmin are excellent for structured storage and reporting. However, they do not naturally preserve the relational structure of a patient’s longitudinal experience.
 
-A graph enables questions such as:
-- Which patient followed the same care path from wave 1 to wave 2 to wave 3?
-- Which symptom scores increased or decreased over time?
-- Which observations are associated with a given patient episode?
-- Where did a patient disengage from follow-up?
-- Which clinical events are connected to the same person and visit flow?
+A graph makes it easier to explore:
 
-This makes the graph particularly valuable for mental health and care continuum analysis.
+- the same person over time
+- the connection between visits and outcomes
+- the trajectory of symptoms and measurements across waves
+- the point where a patient disengaged from care
+- the broader clinical context behind each encounter
+
+This makes the model especially valuable for mental health and longitudinal care research.
 
 ---
 
-## Project structure
+## Architecture overview
 
-The repository currently contains the core scripts needed to validate, enrich, and connect OMOP-derived data to Neo4j:
+```mermaid
+flowchart LR
+    A[PostgreSQL / OMOP data] --> B[Extract and validate records]
+    B --> C[Pseudonymize person and visit IDs]
+    C --> D[Neo4j knowledge graph]
+    D --> E[Visit sequencing]
+    D --> F[Observation enrichment]
+    D --> G[Measurement enrichment]
+    D --> H[Care pathway analysis]
+    H --> I[Clinical note integration future work]
+```
+
+---
+
+## Repository contents
+
+This workspace contains the core scripts for the OMOP-to-graph enrichment workflow:
 
 - import_study2_graph.py
-  - imports and validates the study graph structure
+  - imports and validates study graph data in Neo4j
 - enrich_measurement_scores.py
-  - enriches measurement information already present in the graph
+  - enriches measurement values already present in the graph
 - enrich_observation_values.py
   - attaches numeric and categorical observation values
 - enrich_observation_categories.py
-  - links observation categories to the correct study records
+  - links observation categories to the appropriate records
 - enrich_study2_graph.py
-  - assigns visit order and creates NEXT_VISIT relationships
+  - assigns visit sequence and NEXT_VISIT relationships
 - test_connections.py
-  - validates PostgreSQL and Neo4j connectivity
+  - checks PostgreSQL and Neo4j connectivity
 - test_graph_import.py
-  - confirms a synthetic graph can be created successfully
+  - validates a synthetic Neo4j import path
 
 ---
 
-## Technical direction
+## Development roadmap
 
-The project is designed around a repeatable pipeline:
+Future phases of the project include:
 
-1. Read source data from PostgreSQL
-2. Pseudonymize stable person and visit IDs
-3. Validate relationships before updating the graph
-4. Enrich nodes with measurements, observations, categories, and visit sequencing
-5. Maintain the same person identity across waves and visits
-6. Preserve a clinically interpretable view of the final graph
-
-This ensures that the graph remains faithful to the OMOP source while also exposing longitudinal relationships in a clinically useful form.
-
----
-
-## Future development
-
-The next phase of the project is to extend the graph beyond structured OMOP fields to include:
-- clinical notes
-- extracted symptoms and risk markers
-- treatment engagement tracking
-- care gap and drop-off analysis
-- refinement of mental health-specific care pathways
-
-This will support the transition from a structured graph pipeline to a more complete mental health intelligence platform.
+1. Stable longitudinal person tracking across all waves
+2. Care-path analysis and drop-off detection
+3. Expanded condition and symptom representation
+4. Clinical note ingestion and NLP-based symptom extraction
+5. Public-facing documentation and reproducible pipeline packaging
 
 ---
 
 ## Funders and stakeholders
 
-This project demonstrates how OMOP data can be transformed into a clinically meaningful and interpretable knowledge graph. It is not only a data integration exercise; it is designed to support real-world questions about patient progression, symptom trajectories, continuity of care, and service disengagement.
+This project demonstrates how OMOP-derived clinical data can be transformed into a clinically meaningful and interpretable knowledge graph. It is not only a data integration exercise; it is designed to support real-world questions about patient progression, symptom trajectories, continuity of care, and service disengagement.
 
-The project offers a clear pathway toward a more actionable mental health information system that can reveal where patients are lost to follow-up and where more tailored care support may be needed.
+For funders, the project shows both technical relevance and practical value. It offers a foundation for longitudinal mental health analysis, improved patient pathway understanding, and future clinical-note-informed decision support.
+
+---
+
+## Project status
+
+The repository contains the core graph enrichment and validation scripts required to connect OMOP-derived data to Neo4j.
+
+The next phase is to strengthen the public project narrative, document patient journeys clearly, and expand the graph toward clinical-note-informed care pathway analysis.
 
 ---
 
 ## Summary
 
-This repository provides the foundation for a longitudinal, person-centered knowledge graph that connects OMOP data to clinically relevant relationships in Neo4j. By tracking the same people across waves and linking observations, measurements, and visits, the project captures the real story of care rather than isolated data points.
-
-This work is an important step toward a healthcare intelligence approach that is more useful for mental health programs, patient pathway analysis, and future clinical-note-informed decision support.
+This project creates a person-centered knowledge graph from OMOP mental health data, linking the same individuals across visits and time points and making their care pathways visible. By connecting observations, measurements, and future clinical note findings to the same patient journey, it offers a stronger and more clinically useful view of mental health care than static database tables alone.
