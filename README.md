@@ -12,6 +12,14 @@ Unlike traditional relational data stores, which primarily represent records as 
 
 ---
 
+## Project abstract
+
+This project develops a longitudinal, person-centered knowledge graph for mental health data derived from OMOP-compliant study records. By linking the same patient across multiple visits and time points, the graph preserves continuity of care and connects observations, measurements, and conditions into a single clinical trajectory. The approach makes it possible to identify how symptoms, scores, and engagement change over time and to detect where patients are lost to follow-up or disengage from services.
+
+Unlike traditional relational databases, which primarily represent records as isolated rows, this graph makes patient pathways visible as connected events. This is particularly important for mental health research and service delivery, where trajectories of wellbeing, functioning, and engagement evolve over time and are shaped by clinical and social factors. The project therefore provides a more clinically interpretable and actionable model for understanding longitudinal care in mental health settings.
+
+---
+
 ## Project summary
 
 This project builds a longitudinal mental health knowledge graph from OMOP-based study data. The system links the same individual across multiple visits and time points, connecting observations, measurements, conditions, and future clinical-note findings into a continuous care pathway.
