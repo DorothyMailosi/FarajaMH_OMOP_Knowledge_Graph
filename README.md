@@ -60,9 +60,11 @@ The knowledge graph approach addresses these challenges by making relationships 
 
 ---
 
-## Project approach
+## How the graph is built
 
-We connect OMOP-derived data to a Neo4j graph using a consistent pseudonymized identifier model. This allows the same person and visit to be matched across datasets while preserving privacy.
+The knowledge graph is constructed through an OMOP-to-Neo4j pipeline. Source records are first extracted from PostgreSQL, then person and visit identifiers are pseudonymized so the same individual can be followed across time while preserving privacy. The data are validated before being written to Neo4j to ensure that each measurement, observation, and visit matches the correct patient and encounter.
+
+Each clinical entity is represented as a node in the graph, while relationships connect them into a longitudinal patient journey. For example, Person nodes are linked to Visit nodes through HAS_VISIT, visits to observations through HAS_OBSERVATION, visits to measurements through HAS_MEASUREMENT, and consecutive visits through NEXT_VISIT. This creates a connected care pathway rather than a set of isolated table rows.
 
 The graph includes:
 
