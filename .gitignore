@@ -26,3 +26,19 @@ Thumbs.db
 build/
 dist/
 *.log
+
+# Credentials and private notes: never publish
+*password*
+*Password*
+Neo4j-*-Created-*.txt
+*.secret
+
+# Word/Office lock files
+~$*
+
+# Graph exports may contain participant-level data
+exports/
+*.dump
+
+# Internal planning documents (not for public release)
+knowledge graphs/

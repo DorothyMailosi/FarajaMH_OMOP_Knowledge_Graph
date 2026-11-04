@@ -66,6 +66,24 @@ The knowledge graph is constructed through an OMOP-to-Neo4j pipeline. Source rec
 
 Each clinical entity is represented as a node in the graph, while relationships connect them into a longitudinal patient journey. For example, Person nodes are linked to Visit nodes through HAS_VISIT, visits to observations through HAS_OBSERVATION, visits to measurements through HAS_MEASUREMENT, and consecutive visits through NEXT_VISIT. This creates a connected care pathway rather than a set of isolated table rows.
 
+### Graph model
+
+The diagram shows the structure only; the values are illustrative, not participant data. Dashed links are planned.
+
+```mermaid
+graph LR
+    P["Person<br/>P001"] -->|HAS_VISIT| V1["Visit<br/>Wave 1"]
+    V1 -->|NEXT_VISIT| V2["Visit<br/>Wave 2"]
+    V2 -->|NEXT_VISIT| V3["Visit<br/>Wave 3"]
+    V1 -->|HAS_MEASUREMENT| M["Measurement<br/>DASS depression score"]
+    V1 -->|HAS_OBSERVATION| O["Observation<br/>Marital status"]
+    O -->|HAS_CATEGORY| C["ObservationCategory<br/>Married"]
+    V1 -->|HAS_CONDITION| D["Condition"]
+    M -->|HAS_CONCEPT| K["Concept<br/>standard OMOP name"]
+    V1 -.->|planned| N["ClinicalNote"]
+    N -.-> F["Note finding<br/>symptom, negation"]
+```
+
 The graph includes:
 
 - Person nodes
@@ -75,7 +93,7 @@ The graph includes:
 - Measurement nodes
 - Condition nodes
 - Concept nodes
-- Future ClinicalNote and Symptom nodes
+- Planned ClinicalNote and note-finding nodes (see [Known gap](#known-gap-clinical-notes))
 
 Example relationships:
 
@@ -85,6 +103,7 @@ Example relationships:
 - Visit -[:HAS_CONDITION]-> Condition
 - Visit -[:NEXT_VISIT]-> Visit
 - Observation -[:HAS_CATEGORY]-> ObservationCategory
+- Measurement / Observation / Condition -[:HAS_CONCEPT]-> Concept
 
 ---
 
@@ -96,25 +115,45 @@ A single patient can be followed through a longitudinal care pathway:
 - Wave 2: follow-up visit shows whether symptoms improved or worsened
 - Wave 3: graph shows whether the patient remained engaged or dropped out of care
 
-### Example observation labels
+### Measurements recorded at each wave (standard OMOP names)
+
+- Depression anxiety stress scales depression score
+- Depression anxiety stress scales anxiety score
+- Depression anxiety stress scales stress score
+- PCL-5 post-traumatic stress disorder checklist for DSM-5
+
+### Observations recorded at each wave
 
 - Marital status
-- Household size
+- Number in household
 - Gravida
 - Parity
 - Birth outcome
 - Delivery method
 
-### Example measurement labels
-
-- PHQ-9 score
-- GAD-7 score
-- Depression score
-- Anxiety score
-- Sleep quality score
-- Functional wellbeing score
+Observations link to their recorded category (for example `Marital status` → `Married`, `Parity` → `Parity 1`), and condition records are linked to the visit at which they were recorded.
 
 This allows the system to represent not only isolated values, but a coherent patient trajectory over time.
+
+### Current pilot status
+
+The Study 2 pilot graph contains 25 participants, each followed across all three waves (75 visits), with 300 measurements, 450 observations and 34 condition records. Every count was checked against the PostgreSQL source after import. In Neo4j Browser each participant appears under a stable display ID (P001 to P025), each visit as Wave 1, Wave 2 or Wave 3 joined by `NEXT_VISIT`, and each measurement and observation under its real OMOP concept name with its recorded value.
+
+Because every pilot participant has all three visits, the pilot demonstrates longitudinal tracking but not loss to follow-up. The full Study 2 dataset (775 participants, 2,325 visits) can be imported with the same script, subject to data-governance approval.
+
+The example patient values elsewhere in this repository are illustrative. They should not be presented as results from a real participant unless they have been checked against the approved study data.
+
+---
+
+## Known gap: clinical notes
+
+The OMOP schema for Study 2 includes the standard `note` and `note_nlp` tables, but both are currently empty, so the graph does not yet contain clinical-note information. This is the main gap to address next. The planned extension is:
+
+- populate `note` / `note_nlp` from validated clinical documents through the Silver → Gold pipeline
+- link each note to the participant and visit, and each extracted finding to a standard concept, recording whether the symptom was present or negated and the extraction method
+- keep raw note text out of the graph; store only validated, coded findings with provenance
+
+Until notes are available, a missing wave or missing score shows where follow-up data stops, not whether a person left care. Confirming care drop-off also needs referral, appointment or attendance records.
 
 ---
 
@@ -152,22 +191,71 @@ flowchart LR
 
 ## Repository contents
 
-This workspace contains the core scripts for the OMOP-to-graph enrichment workflow:
+| File | Purpose |
+|---|---|
+| `import_study2_graph.py` | Builds the graph from OMOP: people, waves, measurements, observations, categories, conditions and real concept names. Re-running it updates existing nodes instead of duplicating them. |
+| `assign_display_ids.py` | Gives each participant a stable readable ID (P001, P002, ...) that never changes when more participants are added. |
+| `graph_common.py` | Shared connection settings and the pseudonymization function. |
+| `cypher/01_graph_validation.cypher` | Counts and integrity checks. |
+| `cypher/02_participant_pathway.cypher` | Wave 1 → 2 → 3 for each participant, with real measurement and observation names. |
+| `cypher/03_score_changes.cypher` | Score change across waves, for individuals and the cohort. |
+| `cypher/04_care_engagement.cypher` | Engagement funnel and where follow-up data stops. |
+| `cypher/05_pathway_view.cypher` | Clean single-participant view for Neo4j Browser. |
+| `test_connections.py` | Checks PostgreSQL and Neo4j connectivity. |
+| `test_graph_import.py` | Writes a small synthetic graph to test the Neo4j setup. |
+| `enrich_*.py` | Original pilot enrichment scripts (fixed to the 25-participant pilot). `import_study2_graph.py` now performs all of these steps. |
 
-- import_study2_graph.py
-  - imports and validates study graph data in Neo4j
-- enrich_measurement_scores.py
-  - enriches measurement values already present in the graph
-- enrich_observation_values.py
-  - attaches numeric and categorical observation values
-- enrich_observation_categories.py
-  - links observation categories to the appropriate records
-- enrich_study2_graph.py
-  - assigns visit sequence and NEXT_VISIT relationships
-- test_connections.py
-  - checks PostgreSQL and Neo4j connectivity
-- test_graph_import.py
-  - validates a synthetic Neo4j import path
+## Running the pipeline
+
+```bash
+pip install -r requirements.txt
+
+python test_connections.py
+python import_study2_graph.py --dry-run          # counts and concept names only, no writes
+python import_study2_graph.py --cohort existing  # rebuild the 25-participant pilot
+python import_study2_graph.py --cohort all       # full Study 2
+python assign_display_ids.py
+```
+
+Then run the files in `cypher/` in Neo4j Browser. Connection settings can be changed with the environment variables listed in `graph_common.py` (for example `FARAJAMH_CDM_SCHEMA`). Passwords and the pseudonymization secret are always prompted for and never stored.
+
+### Privacy safeguards in the import
+
+- Only pseudonymized IDs reach the graph; OMOP `person_id` and visit dates are never stored. Visits keep only their wave number and days since wave 1.
+- Observation text is written only if it is a short categorical label (e.g. `Married`). Free text, phone numbers and ID numbers are rejected, and the category values are shown for review before anything is written.
+- Query outputs and screenshots of real participants are participant-level data and should not be committed to this repository.
+
+## The same question in pgAdmin and in the graph
+
+*Which participants' scores rose between one wave and the next?*
+
+In SQL this needs a window function to order each person's visits, then a self-join of the measurement table on person, concept and the next visit:
+
+```sql
+WITH v AS (
+  SELECT person_id, visit_occurrence_id,
+         ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY visit_start_date) AS wave
+  FROM study_2_cdm_r.visit_occurrence)
+SELECT v1.person_id, m1.measurement_concept_id, v1.wave, m1.value_as_number, m2.value_as_number
+FROM v v1
+JOIN v v2 ON v2.person_id = v1.person_id AND v2.wave = v1.wave + 1
+JOIN study_2_cdm_r.measurement m1 ON m1.visit_occurrence_id = v1.visit_occurrence_id
+JOIN study_2_cdm_r.measurement m2 ON m2.visit_occurrence_id = v2.visit_occurrence_id
+     AND m2.measurement_concept_id = m1.measurement_concept_id
+WHERE m2.value_as_number > m1.value_as_number;
+```
+
+In the graph the visit order is stored once as `NEXT_VISIT`, so the query reads like the question:
+
+```cypher
+MATCH (p:Person)-[:HAS_VISIT]->(v1:Visit)-[:NEXT_VISIT]->(v2:Visit),
+      (v1)-[:HAS_MEASUREMENT]->(m1)-[:HAS_CONCEPT]->(c:Concept),
+      (v2)-[:HAS_MEASUREMENT]->(m2)-[:HAS_CONCEPT]->(c)
+WHERE m2.value_as_number > m1.value_as_number
+RETURN p.display_id, c.concept_name, v1.wave, m1.value_as_number, m2.value_as_number;
+```
+
+Both give the same answer. The difference is that the graph stores the pathway explicitly, so new links (conditions, clinical-note findings, referrals) can be added to a visit without redesigning the joins.
 
 ---
 
