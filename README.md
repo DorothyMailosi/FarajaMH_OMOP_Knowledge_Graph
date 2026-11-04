@@ -151,10 +151,7 @@ The view below uses a **fictional** participant (P000) with invented scores, bui
 
 Aggregate results from the 25-participant pilot, produced by `cypher/06_figures.cypher` directly from the graph.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="figures/mean_scores_by_wave_dark.svg">
-  <img alt="Mean DASS depression, anxiety, stress and PCL-5 scores fell from wave 1 to wave 3" src="figures/mean_scores_by_wave_light.svg">
-</picture>
+![Mean DASS depression, anxiety, stress and PCL-5 scores fell from wave 1 to wave 3](figures/mean_scores_by_wave_light.svg)
 
 | Measure | Wave 1 mean (SD) | Wave 2 mean (SD) | Wave 3 mean (SD) |
 |---|---|---|---|
@@ -163,10 +160,7 @@ Aggregate results from the 25-participant pilot, produced by `cypher/06_figures.
 | DASS Stress | 3.4 (5.6) | 2.8 (5.0) | 1.4 (3.8) |
 | PCL-5 | 7.2 (12.3) | 5.7 (10.0) | 2.8 (7.4) |
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="figures/scores_decreased_dark.svg">
-  <img alt="Number of participants whose scores decreased between consecutive waves" src="figures/scores_decreased_light.svg">
-</picture>
+![Number of participants whose scores decreased between consecutive waves](figures/scores_decreased_light.svg)
 
 | Measure | Decreased, wave 1 to 2 | Decreased, wave 2 to 3 |
 |---|---|---|

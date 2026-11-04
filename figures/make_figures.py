@@ -1,5 +1,5 @@
 """
-Draw the README figures as SVG (light and dark versions).
+Draw the README figures as SVG.
 
 The numbers below are aggregate results from cypher/06_figures.cypher
 on the 25-participant Study 2 pilot. No participant-level data is used.
@@ -226,7 +226,10 @@ def decreased_chart(t):
 
 
 def main():
-    for mode, theme in THEMES.items():
+    # Only the light versions are published; pass "dark" here to
+    # draw a dark-background copy for slides.
+    for mode in ["light"]:
+        theme = THEMES[mode]
         (OUT / f"mean_scores_by_wave_{mode}.svg").write_text(
             mean_scores_chart(theme), encoding="utf-8")
         (OUT / f"scores_decreased_{mode}.svg").write_text(
