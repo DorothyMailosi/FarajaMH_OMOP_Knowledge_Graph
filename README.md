@@ -141,6 +141,42 @@ The Study 2 pilot graph contains 25 participants, each followed across all three
 
 Because every pilot participant has all three visits, the pilot demonstrates longitudinal tracking but not loss to follow-up. The full Study 2 dataset (775 participants, 2,325 visits) can be imported with the same script, subject to data-governance approval.
 
+### One participant's pathway in Neo4j
+
+The view below uses a **fictional** participant (P000) with invented scores, built with the same structure as the real graph. It shows how Neo4j Browser presents a participant: one person, three waves joined by `NEXT_VISIT`, each wave's named scores, and an observation linked to its recorded category.
+
+![Fictional participant P000 followed across three waves in Neo4j](figures/fictional_pathway_P000.png)
+
+### Pilot results: scores across the three waves
+
+Aggregate results from the 25-participant pilot, produced by `cypher/06_figures.cypher` directly from the graph.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/mean_scores_by_wave_dark.svg">
+  <img alt="Mean DASS depression, anxiety, stress and PCL-5 scores fell from wave 1 to wave 3" src="figures/mean_scores_by_wave_light.svg">
+</picture>
+
+| Measure | Wave 1 mean (SD) | Wave 2 mean (SD) | Wave 3 mean (SD) |
+|---|---|---|---|
+| DASS Depression | 3.7 (6.2) | 3.0 (5.4) | 1.7 (4.1) |
+| DASS Anxiety | 4.0 (5.9) | 3.4 (5.0) | 1.7 (3.4) |
+| DASS Stress | 3.4 (5.6) | 2.8 (5.0) | 1.4 (3.8) |
+| PCL-5 | 7.2 (12.3) | 5.7 (10.0) | 2.8 (7.4) |
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/scores_decreased_dark.svg">
+  <img alt="Number of participants whose scores decreased between consecutive waves" src="figures/scores_decreased_light.svg">
+</picture>
+
+| Measure | Decreased, wave 1 to 2 | Decreased, wave 2 to 3 |
+|---|---|---|
+| DASS Depression | 6 | 5 |
+| DASS Anxiety | &lt;5 | 7 |
+| DASS Stress | &lt;5 | 5 |
+| PCL-5 | 5 | 8 |
+
+Each participant's change is computed by following their own `NEXT_VISIT` link from one wave to the next. Average scores fell across all four measures. Most participants' scores were unchanged between waves, and standard deviations larger than the means suggest that symptoms are concentrated in a minority of participants. These are descriptive results from a small pilot: they are not a treatment effect and should not be generalized to the full Study 2 cohort. Counts below 5 are suppressed.
+
 The example patient values elsewhere in this repository are illustrative. They should not be presented as results from a real participant unless they have been checked against the approved study data.
 
 ---
@@ -201,6 +237,8 @@ flowchart LR
 | `cypher/03_score_changes.cypher` | Score change across waves, for individuals and the cohort. |
 | `cypher/04_care_engagement.cypher` | Engagement funnel and where follow-up data stops. |
 | `cypher/05_pathway_view.cypher` | Clean single-participant view for Neo4j Browser. |
+| `cypher/06_figures.cypher` | Aggregate queries behind the README charts, and a fictional participant for public screenshots. |
+| `figures/` | README charts and `make_figures.py`, which redraws them from aggregate results. |
 | `test_connections.py` | Checks PostgreSQL and Neo4j connectivity. |
 | `test_graph_import.py` | Writes a small synthetic graph to test the Neo4j setup. |
 | `enrich_*.py` | Original pilot enrichment scripts (fixed to the 25-participant pilot). `import_study2_graph.py` now performs all of these steps. |

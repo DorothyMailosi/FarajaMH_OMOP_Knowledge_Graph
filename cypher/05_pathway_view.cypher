@@ -23,8 +23,8 @@ RETURN visits, next, obs;
 
 // One measurement followed through all waves via NEXT_VISIT
 // (replace the concept name with one listed by 01_graph_validation)
-MATCH (p:Person {display_id: 'P001'})-[:HAS_VISIT]->(v:Visit)
-MATCH (v)-[r:HAS_MEASUREMENT]->(m:Measurement)-[:HAS_CONCEPT]->(c:Concept)
-WHERE c.concept_name CONTAINS 'Depression'
+MATCH visit = (p:Person {display_id: 'P001'})-[:HAS_VISIT]->(v:Visit)
+MATCH score = (v)-[:HAS_MEASUREMENT]->(m:Measurement)-[:HAS_CONCEPT]->(c:Concept)
+WHERE c.concept_name CONTAINS 'depression score'
 OPTIONAL MATCH next = (v)-[:NEXT_VISIT]->(:Visit)
-RETURN p, v, r, m, next;
+RETURN visit, score, next;
